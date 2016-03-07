@@ -18,6 +18,11 @@ function [ Iout, varargout ] = drawLED( Iin, centerPoint, radius,currentBits,noi
             [brightness, phase] = modDPSK(currentBits,varargin{1},varargin{2},varargin{3},noise);
             varargout{1} = phase;
         end
+    elseif(strcmp(modScheme,'MDPSK'))
+        if(length(varargin)==3)
+            [brightness, phase] = modMDPSK(currentBits,varargin{1},varargin{2},varargin{3},noise);
+            varargout{1} = phase;
+        end  
     elseif(strcmp(modScheme,'cON'))
         brightness = 255;
     else

@@ -1,17 +1,15 @@
-function [ output_args ] = modMDPSK( currentBits, phase, freq, t, noise )
+function [ outputBrightness, phase ] = modMDPSK( currentBits, phase, freq, t, noise )
     
     omega = 2*pi*freq;
     amplitude = 50;
     height = 150;
     symbols = length(currentBits);
-    levels = log2(symbols);
+    levels = 2^symbols;
     
-    if(currentBit == 1)
-        phase = phase+pi;
-    end
-
+    currentLevel = bi2de(currentBits,'left-msb');
+    
+    phase = phase + ((2*pi/levels)*currentLevel);
+    
     outputBrightness = floor(amplitude*cos(omega*t+phase)+height);
-
-
 end
 

@@ -10,32 +10,34 @@
     runTime = 5;                           %in seconds
     FTC = runTime*FPS;
     
+    % 01 01 10 10 00 00 11 11 01/11 01 01 11 10 10 10
+    
     %LED settings
     sizeLED = 4;                          %in pixels
     %centerPositionLeds = [1*width/4 1*height/4;3*width/4 1*height/4;1*width/4 3*height/4;3*width/4  3*height/4];  
     %centerPositionLeds = [1*width/3 1*height/3;2*width/3 1*height/3;width/2 2*height/3];
-    centerPositionLeds = [width/4 height/2; 3*width/4 height/2];
-    %centerPositionLeds = [width/2 height/2];     %(x,y)-coordinates
+    %centerPositionLeds = [width/4 height/2; 3*width/4 height/2];
+    centerPositionLeds = [width/2 height/2];     %(x,y)-coordinates
     nLeds = size(centerPositionLeds,1);
-    ledMode = 'faded';                  %clear/faded (brightness) leds 
+    ledMode = 'clear';                  %clear/faded (brightness) leds 
     
     %noise
     noise = [-60 -5];
                                    
     %Code
-    syncEn = 1;
+    syncEn = 0;
     syncCode = '1111';
-    code = '101000110101';
+    code = '101100111100';
     codeLength = length(code);
-    offset = 5;         %offset of acquiring data in nFrames as capturing not always start at the begin of the code
+    offset = 0;         %offset of acquiring data in nFrames as capturing not always start at the begin of the code
     if(syncEn == 1)
         code = strcat(syncCode,code);
     end
     
-        
     %modulation settings
-    phase = pi/12;
-    modulation = 'OOK';
+    phase = 0;
+    modulation = 'MDPSK';
+    levels = 4;
     
     %inits
     nFrames = offset;
@@ -60,13 +62,20 @@ while(nFrames<FTC+offset)
     
     %Get current bits
     if(~mod(nFrames,2))
-        [currentBits, codeIndex] = getCurrentBits(code,nLeds,codeIndex);
+        if(strcmp(modulation,'MDPSK'))
+            nBits = nLeds*log2(levels);
+        else
+            nBits = nLeds;
+        end
+        [currentBits, codeIndex] = getCurrentBits(code,nBits,codeIndex);
     end
     
     %Draw led(s)
     if(strcmp(modulation,'OOK'))
         I = drawLED(I,centerPositionLeds,sizeLED,currentBits,noise,modulation,ledMode);
     elseif(strcmp(modulation,'DPSK'))
+        [I,phase] = drawLED(I,centerPositionLeds,sizeLED,currentBits,noise,modulation,ledMode,phase,FPS/2,t_tmp);
+    elseif(strcmp(modulation,'MDPSK'))
         [I,phase] = drawLED(I,centerPositionLeds,sizeLED,currentBits,noise,modulation,ledMode,phase,FPS/2,t_tmp);
     else
         error('Unknown modulation scheme');
@@ -87,10 +96,10 @@ while(nFrames<FTC+offset)
     %translate led occurances to array of bits (in case of OOK)
     %translates intensity levels of occurances into array of bits (in case
     %of DPSK)
-    bit_sequence = RegisterBit(bit_sequence, occurance, nLeds,modulation,I,FPS/2,centerPositionLeds);
+    bit_sequence = RegisterBit(bit_sequence, occurance, nLeds,modulation,I,FPS/2,centerPositionLeds,levels);
     
     %show frame on videoplayer
-    step(hVideoIn, I);
+    %step(hVideoIn, I);
     
     %next frame
     nFrames = nFrames+1;
@@ -102,7 +111,8 @@ t = toc(start);
 
 %decimate stream by factor 2 (sending frequency is half of receiving frequence)
 %related to # leds
-bit_sequence = decimateStream(bit_sequence,2,nLeds);
+os = bit_sequence;
+bit_sequence = decimateStream(bit_sequence,2,nBits);
 
 %format stream and validate the stream
 if(syncEn == 1)
@@ -110,6 +120,9 @@ if(syncEn == 1)
 else
     [bitstream,effectiveBits] = formatStream(bit_sequence,codeLength);
 end
+
+
+% 2 2 3 3 1 1 4 4 2/4 2 2 4 3 3 3
 
 %Print details
 fprintf('--------------------------------------------------------------------------------------------\n');
